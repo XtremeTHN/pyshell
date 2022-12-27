@@ -2,6 +2,7 @@ import sys, os, configparser
 from os import system as execute
 from glob import glob
 
+
 def find(dirs, word):
     for x in dirs:
         if x.find(word) == -1:
@@ -13,17 +14,20 @@ file = find(glob(os.getcwd() + "/.*.*"), ".pyshell.conf")
 if file == 1:
     def printc(color_handler, color, begin_text,endx="\n"):
         print(begin_text, end=endx)
-    color_handler = 0
-    color = 0
+    color_handler = "default"
+    color = "default"
     begin_text = "default"
 else:
     def printc(color_handler, color, begin_text,endx="\n"):
-        if color_handler == "pystyle":
-
-            print(Colorate.Horizontal(color,begin_text), end="")
-        elif color_handler == "colorama":
-            print(f"{color}{begin_text}{Style.RESET_ALL} ", end="")
+        if color_handler == "colorama":
+            if color == "default":
+                print(begin_text, end=endx)
+            else:
+                print(f"{color}{begin_text}{Style.RESET_ALL}", end=endx) 
         elif color_handler == "default":
+            print(begin_text,end=endx)
+        else:
+            print("Color Handler no disponible")
             print(begin_text,end=endx)
     configs = configparser.ConfigParser()
     configs.read(".pyshell.conf")
@@ -38,16 +42,9 @@ else:
                 elif x == 'begin_text':
                     begin_text = configs['CUSTOMIZATION'][x]
     del configs,secciones
-    from pystyle import Colors, Colorate
-    colors_p = {'blue_to_red':Colors.blue_to_red, 'red_to_blue':Colors.red_to_blue, 'green_to_blue':Colors.green_to_blue}
     from colorama import Fore, Style
     colors_c = {'red':Fore.RED, 'blue':Fore.BLUE, 'yellow':Fore.YELLOW}
-    if color_handler == "pystyle":
-        del Fore, Style
-    elif color_handler == "colorama":
-        del Colors, Colorate
-    else:
-        del Style, Colorate, Fore, Colors
+    del Fore
 class shell:
     def input(opt):
         if opt == "zsh":
@@ -56,7 +53,7 @@ class shell:
         elif opt == "default":
             printc(color_handler,color,"{} > ".format(os.getcwd()),endx="")
         else:
-            printc(color_handler,color, "XD", endx="")
+            printc(color_handler,color, begin_text, endx="")
         command = input()
         return command
 
@@ -74,7 +71,7 @@ class shell:
             return glob(os.getcwd() + "/*")
     
     def cd(args):
-        try:
+        pass
             
 
     class config:
@@ -94,24 +91,35 @@ class shell:
         def editconf(conf_obj, section, conf, value):
             try:
                 if conf == "color":
-                    if value in colors_p:
-                        for x in colors_p:
-                            if x == value:
-                                value = colors_p[x]
-                                break
-                    elif value in colors_c:
+                    if value in colors_c:
                         for x in colors_c:
                             if x == value:
-                                value = colors_c[x]
+                                value = colors_c[x]  
                                 break
-                    print(str(value))
-                conf_obj.set(section, conf, value)
+                if conf == "color_handler":
+                    print("[WARNING] Si cambias la funcion encargada de los colores debes salir y volver a entrar")
+                conf_obj.set(section, conf, str(value))
                 with open('.pyshell.conf','w') as configfile:
                     conf_obj.write(configfile)
                 return 0
-            except (configparser.NoSectionError, TypeError):
+            except (configparser.NoSectionError):
                 return -1
-        
+            except NameError:
+                print("No puedes cambiar el color hasta que hayas reiniciado el programa")
+        def reload():
+            configs = configparser.ConfigParser()
+            configs.read(".pyshell.conf")
+            secciones = ["CUSTOMIZATION"]
+            global color_handler, color, begin_text
+            for z,x in enumerate(secciones):
+                if secciones[z] == "CUSTOMIZATION":
+                    for x in configs[x]:
+                        if x == 'color_handler':
+                            color_handler = configs['CUSTOMIZATION'][x]
+                        elif x == 'color':
+                            color = configs['CUSTOMIZATION'][x]
+                        elif x == 'begin_text':
+                            begin_text = configs['CUSTOMIZATION'][x]
 # Main func
 if __name__ == "__main__":
     #execute("clear")
@@ -140,6 +148,10 @@ if __name__ == "__main__":
                         'color': 'default',
                         'begin_text': 'default'
                 }
+                config['PREFERENCES'] = {
+                        'editor': 'default',
+                        'auto_git': 'false'
+                }
                 with open('.pyshell.conf', 'w') as configfile:
                     config.write(configfile)
                 print("Puedes cambiar la configuración con 'config edit [seccion] [config]'")
@@ -152,7 +164,6 @@ if __name__ == "__main__":
                 if args[1] == "edit":
                     try:
                         error = shell.config.editconf(config,args[2],args[3],args[4])
-                        print(error)
                         if error == -1:
                             print("Seccion o valor no existentes")
                     except IndexError:
@@ -166,9 +177,10 @@ if __name__ == "__main__":
                         else:
                             print("Seccion o configuración no disponible (No existe)")
                     except IndexError:
-                        print("Argumentos insuficientes, escribe 'help' para obtener ayuda")
+                        print("Argumentos insuficientes, escribe 'help' para obtener ayu da")
                         print("Debes de especificar la seccion y la configuración que quieras obtener. Ejemplo 'config get CUSTOMIZATION color'")
-
+                if args[1] == "reload":
+                    shell.config.reload()
             except IndexError:
                 print(find(glob(os.getcwd() + "/.*.*"), ".pyshell.conf"))
     sys.exit(0)     
