@@ -1,5 +1,4 @@
 import sys, os, configparser
-from os import system as execute
 from glob import glob
 
 
@@ -72,7 +71,7 @@ class shell:
             if args[1] == "-r":
                 return glob(os.getcwd() + "/**/*")
             if args[1] == "-d":
-                execute("ls --color=auto")
+                os.system("ls --color=auto")
                 return 0
         except IndexError:
             return glob(os.getcwd() + "/*")
@@ -90,8 +89,10 @@ class shell:
         except IndexError:
             open(args[1], 'x').close()
     def edit(args):
-        try:
-                
+        if editor != "default":
+            os.system(f"vim {args[1]}")
+        else:
+            os.system(f"{editor} {args[1]}")
 
     class config:
         def lsconfs(conf_obj):
@@ -141,7 +142,7 @@ class shell:
                             begin_text = configs['CUSTOMIZATION'][x]
 # Main func
 if __name__ == "__main__":
-    #execute("clear")
+    os.system("clear")
     # Main loop
     while True:
         user = shell.input(begin_text)
@@ -158,7 +159,7 @@ if __name__ == "__main__":
             try:
                 shell.cd(args)
             except:
-                print(sys.exc_info())
+                print(sys.exc_info()[1])
                 pass
         if args[0] == "clear":
             shell.clear()
