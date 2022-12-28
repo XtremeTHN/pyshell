@@ -16,6 +16,9 @@ if file == 1:
     color_handler = "default"
     color = "default"
     begin_text = "default"
+    auto_git = False
+    auto_makefile = False
+    editor = "default"
 else:
     def printc(color_handler, color, begin_text,endx="\n"):
         if color_handler == "colorama":
@@ -97,6 +100,7 @@ class shell:
             choice = input("Eliminar configuracion? (S/N): ")
             if choice in ["S",'s','Y','y','yes','Yes','YES','SI','Si','si','']:
                 os.remove(".pyshell.conf")
+                shell.config.reload()
             elif choice in ['N','n','No','no','Nope','nope','NO']:
                 print("Configuracion no eliminada, saliendo para no crear danos")
                 sys.exit(1)
@@ -104,29 +108,53 @@ class shell:
         if args[1] == "project":
             if args[3] == "c":
                 lang = args[3]
-                if auto_makefile:
+                if auto_makefile == True:
                     try:
                         path = os.path.join(args[4],'Makefile')
+                        os.system(f'mkdir -p {args[4]}')
                     except IndexError:
                         path = os.path.join(os.getcwd(),'Makefile')
-                    makefile_template = open('templates/makefile','r').read()
+                    open(f'{os.path.join(args[4],"main.c")}','w').close()
+                    makefile_template = open('templates/makefile','r')
                     with open(path,'w') as file:
                         file.write(f"""
 all: {args[2]}
-
 NAME = {args[2]}
+WARNINGS = -Wall
+DEBUG = -ggdb -fno-omit-frame-pointer
+OPTIMIZE = -O2
 
-{makefile_template}
+{args[2]}: Makefile main.c
+{makefile_template.read()}
 """)
-                        
-            if auto_git:
+                    makefile_template.close()
+            if auto_git == True:
                 try:
-                    os.system(f"git init {args[4]}")
+                    os.system(f"git init {args[4]}; git branch -m main")
                 except IndexError:
-                    os.system(f"git init .")
+                    os.system(f"git init .; git branch -m main")
             if args[3] == "python":
-                shell.touch(['','main.py'])
-
+                try:
+                    os.system(f'mkdir -p {args[4]}')
+                    shell.touch(['',os.path.join(args[4],'main.py')])
+                except IndexError:
+                    shell.touch(['','main.py'])
+    def read(args):
+        try:
+            if os.path.exists(args[1]) == True:
+                if os.path.isfile(args[1]) != True:
+                    print('read: No es un archivo')
+                    return -1
+            else:
+                print('read: El archivo no existe')
+                return -1
+            file = open(args[1],'r')
+            print(file.read())
+            file.close()
+            return 0
+        except IndexError:
+            print('read: Argumentos insuficientes')
+            return -1
     class config:
         def lsconfs(conf_obj):
             confs = conf_obj.sections()
@@ -160,25 +188,36 @@ NAME = {args[2]}
             except NameError:
                 print("No puedes cambiar el color hasta que hayas reiniciado el programa")
         def reload():
-            configs = configparser.ConfigParser()
-            configs.read(".pyshell.conf")
-            secciones = ["CUSTOMIZATION","PREFERENCES"]
-            global color_handler, color, begin_text, auto_git, editor
-            for z,x in enumerate(secciones):
-                if secciones[z] == "CUSTOMIZATION":
-                    for x in configs[x]:
-                        if x == 'color_handler':
-                            color_handler = configs['CUSTOMIZATION'][x]
-                        elif x == 'color':
-                            color = configs['CUSTOMIZATION'][x]
-                        elif x == 'begin_text':
-                            begin_text = configs['CUSTOMIZATION'][x]
-                elif secciones[z] == "PREFERENCES":
-                    for x in configs[x]:
-                        if x == "editor":
-                            editor = configs['PREFERENCES'][x]
-                        elif x == "auto_git":
-                            auto_git = configs['PREFERENCES'][x]
+            try:
+                configs = configparser.ConfigParser()
+                configs.read(".pyshell.conf")
+                secciones = ["CUSTOMIZATION","PREFERENCES"]
+                global color_handler, color, begin_text, auto_git, auto_makefile, editor
+                for z,x in enumerate(secciones):
+                    if secciones[z] == "CUSTOMIZATION":
+                        for x in configs[x]:
+                            if x == 'color_handler':
+                                color_handler = configs['CUSTOMIZATION'][x]
+                            elif x == 'color':
+                                color = configs['CUSTOMIZATION'][x]
+                            elif x == 'begin_text':
+                                begin_text = configs['CUSTOMIZATION'][x]
+                    elif secciones[z] == "PREFERENCES":
+                        for x in configs[x]:
+                            if x == "editor":
+                                editor = configs['PREFERENCES'][x]
+                            elif x == "auto_git":
+                                auto_git = configs['PREFERENCES'][x]
+                            elif x == "auto_makefile":
+                                auto_makefile = configs['PREFERENCES'][x]
+            except:
+                color_handler = "default"
+                color = "default"
+                begin_text = "default"
+                editor = "default"
+                auto_git = "default"
+                auto_makefile = "default"
+                return -1
 # Main func
 if __name__ == "__main__":
     os.system("clear")
@@ -194,16 +233,20 @@ if __name__ == "__main__":
             result = shell.ls(args) 
             if result != 0:
                 print(result, end="\n\n")
+            continue
         if args[0] == "cd":
             try:
                 shell.cd(args)
             except:
                 print(sys.exc_info()[1])
-                pass
+            finally:
+                continue
         if args[0] == "clear":
             shell.clear()
+            continue
         if args[0] == "create":
             shell.touch(args)
+            continue
         if args[0] == "new":
             try:
                 args[3]
@@ -212,8 +255,13 @@ if __name__ == "__main__":
                 continue
             else:
                 shell.new(args)
+            continue
         if args[0] == "edit":
             shell.edit(args)
+            continue
+        if args[0] == "read":
+            shell.read(args)
+            continue
         # Mucho comando    
         if args[0] == "config":
             config_name = find(glob(os.getcwd() + "/.*.*"), ".pyshell.conf")
@@ -244,6 +292,7 @@ if __name__ == "__main__":
 
                 if args[1] == "ls":
                     shell.config.lsconfs(config)
+                    continue
                 if args[1] == "edit":
                     try:
                         error = shell.config.editconf(config,args[2],args[3],args[4])
@@ -252,6 +301,8 @@ if __name__ == "__main__":
                     except IndexError:
                         print("Argumentos insuficientes, escribe 'help' para obtener ayuda")
                         print("Debes de especificar la seccion y la configuración que quieras cambiar 'config edit CUSTOMIZATION color_handler [valor]'")
+                    finally:
+                        continue
                 if args[1] == "get":
                     try:
                         conf_usr = shell.config.getconf(config,args[2], args[3])
@@ -262,10 +313,17 @@ if __name__ == "__main__":
                     except IndexError:
                         print("Argumentos insuficientes, escribe 'help' para obtener ayu da")
                         print("Debes de especificar la seccion y la configuración que quieras obtener. Ejemplo 'config get CUSTOMIZATION color'")
+                    finally:
+                        continue
                 if args[1] == "reload":
-                    shell.config.reload()
+                    if shell.config.reload() == -1:
+                        print("Configuracion no existente, tomando valores predeterminados...")
+                        continue
                 #Comando config terminado
 
             except IndexError:
                 print(find(glob(os.getcwd() + "/.*.*"), ".pyshell.conf"))
+            finally:
+                continue
+        print("No existe el comando")
     sys.exit(0)     
