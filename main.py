@@ -41,6 +41,13 @@ else:
                     color = configs['CUSTOMIZATION'][x]
                 elif x == 'begin_text':
                     begin_text = configs['CUSTOMIZATION'][x]
+        elif secciones[z] == "PREFERENCES":
+            for x in configs[x]:
+                if x == "editor":
+                    editor = configs['PREFERENCES'][x]
+                elif x == 'auto_git':
+                    auto_git = configs['PREFERENCES'][x]
+
     del configs,secciones
     from colorama import Fore, Style
     colors_c = {'red':Fore.RED, 'blue':Fore.BLUE, 'yellow':Fore.YELLOW}
@@ -71,8 +78,20 @@ class shell:
             return glob(os.getcwd() + "/*")
     
     def cd(args):
-        pass
-            
+        os.chdir(args[1])
+
+    def clear():
+        os.system("clear")
+    
+    def touch(args):
+        try:
+            if args[1] == "-s":
+                open(args[2], 'w').close()
+        except IndexError:
+            open(args[1], 'x').close()
+    def edit(args):
+        try:
+                
 
     class config:
         def lsconfs(conf_obj):
@@ -136,8 +155,18 @@ if __name__ == "__main__":
             if result != 0:
                 print(result, end="\n\n")
         if args[0] == "cd":
-            result = shell.cd(args)
-
+            try:
+                shell.cd(args)
+            except:
+                print(sys.exc_info())
+                pass
+        if args[0] == "clear":
+            shell.clear()
+        if args[0] == "new":
+            shell.touch(args)
+        if args[0] == "edit":
+            shell.edit(args)
+        # Mucho comando    
         if args[0] == "config":
             config_name = find(glob(os.getcwd() + "/.*.*"), ".pyshell.conf")
             if config_name == 1:
@@ -152,8 +181,13 @@ if __name__ == "__main__":
                         'editor': 'default',
                         'auto_git': 'false'
                 }
-                with open('.pyshell.conf', 'w') as configfile:
-                    config.write(configfile)
+                try:
+                    with open('.pyshell.conf', 'w') as configfile:
+                        config.write(configfile)
+                except:
+                    print("Error al intentar crear un archivo de configuracion")
+                    print(sys.exc_info()[1])
+                    continue
                 print("Puedes cambiar la configuración con 'config edit [seccion] [config]'")
             try:
                 config = configparser.ConfigParser()
@@ -181,6 +215,8 @@ if __name__ == "__main__":
                         print("Debes de especificar la seccion y la configuración que quieras obtener. Ejemplo 'config get CUSTOMIZATION color'")
                 if args[1] == "reload":
                     shell.config.reload()
+                #Comando config terminado
+
             except IndexError:
                 print(find(glob(os.getcwd() + "/.*.*"), ".pyshell.conf"))
     sys.exit(0)     
