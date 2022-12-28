@@ -30,7 +30,7 @@ else:
             print(begin_text,end=endx)
     configs = configparser.ConfigParser()
     configs.read(".pyshell.conf")
-    secciones = ["CUSTOMIZATION"]
+    secciones = ["CUSTOMIZATION","PREFERENCES"]
     for z,x in enumerate(secciones):
         if secciones[z] == "CUSTOMIZATION":
             for x in configs[x]:
@@ -45,7 +45,9 @@ else:
                 if x == "editor":
                     editor = configs['PREFERENCES'][x]
                 elif x == 'auto_git':
-                    auto_git = configs['PREFERENCES'][x]
+                    auto_git = configs.getboolean('PREFERENCES',x)
+                elif x == 'auto_makefile':
+                    auto_makefile = configs.getboolean('PREFERENCES',x)
 
     del configs,secciones
     from colorama import Fore, Style
@@ -83,16 +85,47 @@ class shell:
         os.system("clear")
     
     def touch(args):
-        try:
-            if args[1] == "-s":
-                open(args[2], 'w').close()
-        except IndexError:
-            open(args[1], 'x').close()
+        open(args[1], 'w').close()
     def edit(args):
-        if editor != "default":
-            os.system(f"vim {args[1]}")
-        else:
-            os.system(f"{editor} {args[1]}")
+        try:
+            if editor == "default":
+                os.system(f"vim {args[1]}")
+            else:
+                os.system(f"{editor} {args[1]}")
+        except NameError as exc:
+            print("Configuracion corrupta,",exc)
+            choice = input("Eliminar configuracion? (S/N): ")
+            if choice in ["S",'s','Y','y','yes','Yes','YES','SI','Si','si','']:
+                os.remove(".pyshell.conf")
+            elif choice in ['N','n','No','no','Nope','nope','NO']:
+                print("Configuracion no eliminada, saliendo para no crear danos")
+                sys.exit(1)
+    def new(args):
+        if args[1] == "project":
+            if args[3] == "c":
+                lang = args[3]
+                if auto_makefile:
+                    try:
+                        path = os.path.join(args[4],'Makefile')
+                    except IndexError:
+                        path = os.path.join(os.getcwd(),'Makefile')
+                    makefile_template = open('templates/makefile','r').read()
+                    with open(path,'w') as file:
+                        file.write(f"""
+all: {args[2]}
+
+NAME = {args[2]}
+
+{makefile_template}
+""")
+                        
+            if auto_git:
+                try:
+                    os.system(f"git init {args[4]}")
+                except IndexError:
+                    os.system(f"git init .")
+            if args[3] == "python":
+                shell.touch(['','main.py'])
 
     class config:
         def lsconfs(conf_obj):
@@ -129,8 +162,8 @@ class shell:
         def reload():
             configs = configparser.ConfigParser()
             configs.read(".pyshell.conf")
-            secciones = ["CUSTOMIZATION"]
-            global color_handler, color, begin_text
+            secciones = ["CUSTOMIZATION","PREFERENCES"]
+            global color_handler, color, begin_text, auto_git, editor
             for z,x in enumerate(secciones):
                 if secciones[z] == "CUSTOMIZATION":
                     for x in configs[x]:
@@ -140,6 +173,12 @@ class shell:
                             color = configs['CUSTOMIZATION'][x]
                         elif x == 'begin_text':
                             begin_text = configs['CUSTOMIZATION'][x]
+                elif secciones[z] == "PREFERENCES":
+                    for x in configs[x]:
+                        if x == "editor":
+                            editor = configs['PREFERENCES'][x]
+                        elif x == "auto_git":
+                            auto_git = configs['PREFERENCES'][x]
 # Main func
 if __name__ == "__main__":
     os.system("clear")
@@ -163,8 +202,16 @@ if __name__ == "__main__":
                 pass
         if args[0] == "clear":
             shell.clear()
-        if args[0] == "new":
+        if args[0] == "create":
             shell.touch(args)
+        if args[0] == "new":
+            try:
+                args[3]
+            except IndexError:
+                print("Argumentos insuficientes, escribe help para obtener ayuda")
+                continue
+            else:
+                shell.new(args)
         if args[0] == "edit":
             shell.edit(args)
         # Mucho comando    
@@ -180,7 +227,8 @@ if __name__ == "__main__":
                 }
                 config['PREFERENCES'] = {
                         'editor': 'default',
-                        'auto_git': 'false'
+                        'auto_git': 'false',
+                        'auto_makefile': 'false'
                 }
                 try:
                     with open('.pyshell.conf', 'w') as configfile:

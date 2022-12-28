@@ -1,3 +1,1 @@
-1. Al editar la configuracion de la seccion CUSTOMIZATION seccion color_handler y dejarlo a pystyle el texto se bugea (Arreglado eliminando la opcion de elegir pystyle)
-
-
+1. Makefile no sale tan bien como deberia, lo arreglo manana
