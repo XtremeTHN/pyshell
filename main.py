@@ -1,4 +1,4 @@
-import sys, os, configparser
+import sys, os, configparser, shutil
 from glob import glob
 
 
@@ -109,7 +109,7 @@ class shell:
                 if z == 0:
                     continue
                 command.append(x)
-            exec("".join(map(str,command)))
+            exec(" ".join(map(str,command)))
         except IndexError:
             print("python-shell: Argumentos insuficientes")
         except:
@@ -145,16 +145,19 @@ class shell:
                 sys.exit(1)
     def write(args):
         try:
-            if args[1] == ">>":
+            if args[2] == "-append":
                 file = open(args[1],'a')
-            elif args[1] == ">":
+            elif args[2] == "-rewrite":
                 file = open(args[1],'w')
             text = []
             for x,z in enumerate(args):
-                if x in [0,1]:
+                if x in [0,1,2]:
                     continue
                 text.append(z)
             file.write(" ".join(map(str,text)))
+            file.close()
+        except IndexError:
+            return -1
     def new(args):
         if args[1] == "project":
             if args[3] == "c":
@@ -193,15 +196,19 @@ OPTIMIZE = -O2
         
         if args[1] == "git_project":
             try:
-                args[5]
+                args[4]
             except IndexError:
                 return -1
             else:
-                write(['placeholder','README.md','>',"#{}".format(args[2])])
-                os.system(f"git init {args[3]}; git branch -m main; git pul")
+                shell.write(['placeholder','README.md','>',"#{}".format(args[2])])
+                os.system(f"git init {args[3]}; git branch -m main")
                 if args[4] == "-remote":
-                    os.system(f"git remote add origin {args[5]}")
-
+                    try:
+                        os.system(f"git remote add origin {args[5]}")
+                    except IndexError:
+                        return -1
+                elif args[4] == "-local":
+                    print("Creando repositorio local...")
 
     def read(args):
         try:
@@ -358,13 +365,18 @@ if __name__ == "__main__":
                 print("Argumentos insuficientes, escribe help para obtener ayuda")
                 continue
             else:
-                shell.new(args)
+                error = shell.new(args)
+                if error == -1:
+                    print("Argumentos insuficientes, escribe help para obtener ayuda")
             continue
         if args[0] == "edit":
             shell.edit(args)
             continue
         if args[0] == "read":
             shell.read(args)
+            continue
+        if args[0] == "write":
+            shell.write(args)
             continue
         if args[0] == "python":
             shell.python(args)
