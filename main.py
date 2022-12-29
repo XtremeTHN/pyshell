@@ -74,12 +74,24 @@ class shell:
     def ls(args):
         try:
             if args[1] == "-r":
-                return glob(os.getcwd() + "/**/*")
+                try:
+                    return glob(args[2] + "/**/*")
+                except IndexError:
+                    return glob(os.getcwd() + "/**/*")
             if args[1] == "-d":
-                os.system("ls --color=auto")
-                return 0
+                try:
+                    os.system(f"ls --color=auto {args[2]}")
+                except IndexError:
+                    os.system("ls --color=auto")
+                return ""
+            raise IndexError("placeholder")
         except IndexError:
-            return glob(os.getcwd() + "/*")
+            try:
+                return glob(os.path.join(args[1],'*'))
+            except IndexError:
+                return glob(os.getcwd() + "/*")
+            except:
+                print(sys.exc_info())
     
     def cd(args):
         os.chdir(args[1])
@@ -89,6 +101,33 @@ class shell:
     
     def touch(args):
         open(args[1], 'w').close()
+
+    def python(args):
+        try:
+            command = []
+            for z,x in enumerate(args):
+                if z == 0:
+                    continue
+                command.append(x)
+            exec("".join(map(str,command)))
+        except IndexError:
+            print("python-shell: Argumentos insuficientes")
+        except:
+            print(sys.exc_info()[1])
+
+    def linux(args):
+        try:
+            command = []
+            for z,x in enumerate(args):
+                if z == 0:
+                    continue
+                command.append(x)
+            os.system(" ".join(map(str,command)))
+        except IndexError:
+            print("linux-shell: Argumentos insuficientes")
+        except:
+            print(sys.exc_info()[1])
+
     def edit(args):
         try:
             if editor == "default":
@@ -104,6 +143,18 @@ class shell:
             elif choice in ['N','n','No','no','Nope','nope','NO']:
                 print("Configuracion no eliminada, saliendo para no crear danos")
                 sys.exit(1)
+    def write(args):
+        try:
+            if args[1] == ">>":
+                file = open(args[1],'a')
+            elif args[1] == ">":
+                file = open(args[1],'w')
+            text = []
+            for x,z in enumerate(args):
+                if x in [0,1]:
+                    continue
+                text.append(z)
+            file.write(" ".join(map(str,text)))
     def new(args):
         if args[1] == "project":
             if args[3] == "c":
@@ -130,7 +181,7 @@ OPTIMIZE = -O2
                     makefile_template.close()
             if auto_git == True:
                 try:
-                    os.system(f"git init {args[4]}; git branch -m main")
+                    os.system(f'git init {args[4]}; git branch -m main')
                 except IndexError:
                     os.system(f"git init .; git branch -m main")
             if args[3] == "python":
@@ -139,6 +190,19 @@ OPTIMIZE = -O2
                     shell.touch(['',os.path.join(args[4],'main.py')])
                 except IndexError:
                     shell.touch(['','main.py'])
+        
+        if args[1] == "git_project":
+            try:
+                args[5]
+            except IndexError:
+                return -1
+            else:
+                write(['placeholder','README.md','>',"#{}".format(args[2])])
+                os.system(f"git init {args[3]}; git branch -m main; git pul")
+                if args[4] == "-remote":
+                    os.system(f"git remote add origin {args[5]}")
+
+
     def read(args):
         try:
             if os.path.exists(args[1]) == True:
@@ -155,6 +219,36 @@ OPTIMIZE = -O2
         except IndexError:
             print('read: Argumentos insuficientes')
             return -1
+    
+    def remove(args):
+        try:
+            nexists = 0
+            for x in args:
+                if os.path.exists(x) == True:
+                    if os.path.isfile == True:
+                        os.remove(x)
+                    else:
+                        shutil.rmtree(x)
+                else:
+                    nexists += 1
+            return (0,nexists)
+        except PermissionError as e:
+            print(e,'\nForzando la eliminacion...')
+            nexists = 0
+            for x in args:
+                if os.path.exists(x) == True:
+                    if os.path.isfile == True:
+                        os.system(f"sudo rm {x}")
+                    else:
+                        os.system(f"sudo rm -rf {x}")
+                else:
+                    nexists += 1
+            return (0,nexists)
+        except IndexError:
+            print("rm: Argumentos insuficientes")
+        except:
+            return (1,sys.exc_info())
+
     class config:
         def lsconfs(conf_obj):
             confs = conf_obj.sections()
@@ -231,8 +325,7 @@ if __name__ == "__main__":
             break
         if args[0] == "ls":
             result = shell.ls(args) 
-            if result != 0:
-                print(result, end="\n\n")
+            print(result, end="\n")
             continue
         if args[0] == "cd":
             try:
@@ -241,6 +334,17 @@ if __name__ == "__main__":
                 print(sys.exc_info()[1])
             finally:
                 continue
+        if args[0] == "rm":
+            error = shell.remove(args)
+            if error[0] != 0:
+                print(error[1][1])
+            else:
+                if len(args) == 2:
+                    if error[1] != 0:
+                        print("rm: No existe el archivo o directorio")
+                else:
+                    if error[1] != 0:
+                        print("rm: Uno o mas archivos/directorios no existen")
         if args[0] == "clear":
             shell.clear()
             continue
@@ -261,6 +365,12 @@ if __name__ == "__main__":
             continue
         if args[0] == "read":
             shell.read(args)
+            continue
+        if args[0] == "python":
+            shell.python(args)
+            continue
+        if args[0] == "linux":
+            shell.linux(args)
             continue
         # Mucho comando    
         if args[0] == "config":
